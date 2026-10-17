@@ -1,0 +1,689 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Country RNG 🌍</title>
+<style>
+:root{--bg:#0b1020;--panel:#18213b;--line:#303c60;--text:#f5f7ff;--muted:#aab6d5;--purple:#8965ff}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#252b52,#0b1020 70%);color:var(--text);font-family:system-ui,Arial,sans-serif}
+header{text-align:center;padding:24px 12px;background:#121a30;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:clamp(28px,5vw,43px)}
+header p,.muted{color:var(--muted)}
+main{max-width:1100px;margin:auto;padding:14px}
+.panel{background:linear-gradient(145deg,#1c2542,#141b30);border:1px solid var(--line);border-radius:17px;padding:16px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:#0d1428;border:1px solid #293452;border-radius:12px;text-align:center;padding:12px 4px}
+.stat strong{display:block;font-size:clamp(18px,3vw,26px);overflow-wrap:anywhere}
+.stat span{color:var(--muted);font-size:12px}
+#result{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px}
+#flag{display:none;width:min(280px,85%);height:145px;object-fit:contain;filter:drop-shadow(0 6px 12px #0009)}
+#countryName{font-size:clamp(26px,5vw,38px);font-weight:900;margin-top:12px}
+#rarity{font-size:19px;font-weight:900;margin-top:4px}
+#details{color:var(--muted);margin-top:8px}
+button{border:0;border-radius:11px;padding:11px 14px;font-weight:800;cursor:pointer;color:white;background:#303b5d;margin:3px}
+button:hover{filter:brightness(1.15)}
+button:disabled{opacity:.55;cursor:wait}
+.primary{background:var(--purple)}
+.roll{display:block;width:100%;padding:17px;font-size:22px;background:linear-gradient(100deg,#7955ff,#bd4cff)}
+.danger{background:#b52d49}.green{background:#19855f}
+.controls,.sectionhead{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+label{display:inline-flex;align-items:center;gap:6px;margin:5px 8px 5px 0}
+input[type=checkbox]{accent-color:#9b7aff;width:18px;height:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}
+.card{background:#0e1529;border:1px solid #2c3858;border-radius:12px;padding:11px;text-align:center;overflow-wrap:anywhere}
+.card img{width:100%;height:65px;object-fit:contain}
+.card strong{display:block;margin:7px 0}
+.card small{display:block;color:var(--muted);line-height:1.7}
+.common{color:#bac4da}.uncommon{color:#6df0a5}.rare{color:#61d6ff}
+.epic{color:#c6a0ff}.legendary{color:#ffd166}.mythic{color:#ff779d}
+.shiny{color:#fff16a;text-shadow:0 0 12px #ffcd38}
+.logrow{padding:6px 0;border-bottom:1px solid #2b3554;overflow-wrap:anywhere}
+#odds{max-height:350px;overflow:auto;line-height:1.8}
+.progress{height:7px;background:#0a1020;border-radius:8px;overflow:hidden;margin-top:8px}
+.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#8058ff,#ffd166)}
+@keyframes pop{0%{transform:scale(.8);opacity:.4}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop .3s}
+@keyframes shine{50%{filter:drop-shadow(0 0 22px #ffe65c)}}
+.shinyflag{animation:shine 1s infinite}
+#blackout{display:none;position:fixed;inset:0;z-index:9999;background:#000;color:white;overflow:hidden}
+#blackout.active{display:grid;place-items:center;animation:fade .5s}
+.scene{--aura:#c6a0ff;position:absolute;inset:0;background:#000;display:grid;place-items:center;overflow:hidden}
+.vignette{position:absolute;inset:-20%;background:radial-gradient(ellipse at center,transparent 5%,color-mix(in srgb,var(--aura) 25%,transparent) 48%,var(--aura) 150%);filter:blur(28px);animation:glow 4s forwards}
+.fog{position:absolute;inset:45% -20% -20%;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--aura) 45%,transparent),transparent 70%);filter:blur(30px);animation:fog 4s forwards}
+.cutStar{position:absolute;width:120px;height:120px;background:var(--aura);filter:drop-shadow(0 0 30px var(--aura));clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:spin 3s forwards}
+.cutStar.mythic{width:160px;height:160px;clip-path:polygon(50% 0,61% 31%,85% 15%,75% 39%,100% 50%,75% 61%,85% 85%,61% 69%,50% 100%,39% 69%,15% 85%,25% 61%,0 50%,25% 39%,15% 15%,39% 31%)}
+.cutText{position:absolute;top:12%;width:100%;text-align:center;letter-spacing:4px;font-size:clamp(14px,3vw,24px);font-weight:900;opacity:0;animation:appear .6s 1s forwards}
+.cutReveal{position:relative;z-index:2;text-align:center;width:100%;padding:15px;opacity:0;transform:scale(.5);animation:reveal .8s 2.8s forwards}
+.cutReveal img{width:min(72vw,350px);height:180px;object-fit:contain;filter:drop-shadow(0 0 24px var(--aura))}
+.cutReveal h2{font-size:clamp(32px,7vw,60px);margin:12px 0;text-shadow:0 0 25px var(--aura)}
+.cutContinue{position:absolute;bottom:25px;left:50%;transform:translateX(-50%);opacity:0;animation:appear .5s 3.6s forwards}
+.flash{position:absolute;inset:0;background:white;opacity:0;animation:flash .4s 2.4s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes glow{from{opacity:0}to{opacity:1}}
+@keyframes fog{from{opacity:0;transform:translateY(50px)}to{opacity:.5;transform:translateY(0)}}
+@keyframes spin{0%{opacity:0;transform:scale(.1) rotate(0)}25%{opacity:1}70%{transform:scale(1.5) rotate(200deg)}100%{opacity:.2;transform:scale(2.2) rotate(340deg)}}
+@keyframes appear{to{opacity:1}}
+@keyframes reveal{to{opacity:1;transform:scale(1)}}
+@keyframes flash{0%{opacity:0}20%{opacity:.9}100%{opacity:0}}
+@media(max-width:520px){main{padding:9px}.panel{padding:12px}.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important}}
+</style>
+</head>
+<body>
+<header>
+<h1>🌍 COUNTRY RNG</h1>
+<p>Roll the world. Collect countries. Chase the impossible pull.</p>
+</header>
+<main>
+<section class="panel">
+<div class="stats">
+<div class="stat"><strong id="rolls">0</strong><span>Total Rolls</span></div>
+<div class="stat"><strong id="collected">0</strong><span>Unique Variants</span></div>
+<div class="stat"><strong id="coins">100</strong><span>🪙 Coins</span></div>
+<div class="stat"><strong id="best">None</strong><span>Best Rarity</span></div>
+</div>
+<p id="loadStatus" class="muted">Loading your 197 countries…</p>
+<div class="progress"><span id="loadProgress"></span></div>
+</section>
+
+<section class="panel">
+<div id="result">
+<div id="placeholder" class="muted">Your country collection starts here!</div>
+<img id="flag" alt="Country flag">
+<div id="countryName"></div><div id="rarity"></div><div id="details"></div>
+</div>
+<button id="rollButton" class="roll" disabled>LOADING COUNTRIES…</button>
+<p id="status" class="muted">Preparing the world…</p>
+<div class="controls">
+<label><input id="soundToggle" type="checkbox" checked> 🔊 Sound</label>
+<label><input id="autoToggle" type="checkbox"> ⚡ Auto-roll</label>
+<label><input id="shinyToggle" type="checkbox" checked> ✨ Shiny variants</label>
+<button id="stopAuto">Stop auto-roll</button>
+</div>
+<p class="muted">Your progress saves automatically in this browser.</p>
+</section>
+
+<section class="panel">
+<div class="sectionhead"><h2>🍀 Luck Shop</h2><span>Upgrade your odds!</span></div>
+<p>Luck level: <strong id="luckLevel">0</strong> · Luck bonus: <strong id="luckBoost">1.00×</strong></p>
+<button class="primary" id="buyLuck">Buy Luck Upgrade — 100 coins</button>
+<button id="buyCoins">Claim 25 free coins</button>
+<p class="muted">Luck makes higher-GDP countries relatively easier to roll.</p>
+</section>
+
+<section class="panel">
+<div class="sectionhead"><h2>⚙️ Settings</h2><button id="toggleSettings">Hide Settings</button></div>
+<div id="settingsContent">
+<p>💾 Auto-save is enabled.</p>
+<label><input id="settingsSound" type="checkbox" checked> 🔊 Sound effects</label><br>
+<label><input id="settingsShiny" type="checkbox" checked> ✨ Shiny variants</label><br>
+<label><input id="settingsAuto" type="checkbox"> ⚡ Auto-roll</label>
+<p class="muted">Saved locally in this browser. Clearing browser data may erase progress.</p>
+<button class="green" id="saveNow">💾 Save Now</button>
+<hr style="border-color:#303b60;margin:20px 0">
+<h3>⚠️ Danger Zone</h3>
+<p class="muted">Reset all rolls, coins, luck, collection, and settings.</p>
+<button class="danger" id="resetEverything">🗑️ RESET EVERYTHING</button>
+</div>
+</section>
+
+<section class="panel">
+<div class="sectionhead"><h2>🎒 Your Collection</h2><span id="collectionCount" class="muted">0 variants</span></div>
+<div class="controls">
+<button data-filter="all">All</button>
+<button data-filter="shiny">✨ Shiny</button>
+<button data-filter="duplicates">Duplicates</button>
+</div>
+<div id="inventory" class="grid" style="margin-top:12px"></div>
+</section>
+
+<section class="panel"><h2>🏆 Personal Leaderboard</h2><div id="leaderboard"></div></section>
+<section class="panel"><h2>📜 Recent Rolls</h2><div id="log" class="muted">No rolls yet. Go on, roll the world!</div></section>
+<section class="panel">
+<div class="sectionhead"><h2>📊 Country Odds</h2><button id="showOdds">Show odds</button></div>
+<div id="odds" hidden></div>
+<p class="muted">GDP figures use your supplied ranking. Countries without a supplied figure are marked as estimates.</p>
+</section>
+</main>
+<div id="blackout" aria-live="polite"></div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const SAVE_KEY="countryRng197_v1";
+
+const TIERS=[
+{name:"Common",cls:"common",rank:0,min:0},
+{name:"Uncommon",cls:"uncommon",rank:1,min:10e9},
+{name:"Rare",cls:"rare",rank:2,min:50e9},
+{name:"Epic",cls:"epic",rank:3,min:200e9},
+{name:"Legendary",cls:"legendary",rank:4,min:800e9},
+{name:"Mythic",cls:"mythic",rank:5,min:2e12}
+];
+
+/* GDP values in USD, based on YOUR ranking.
+   No online data is allowed to overwrite these values. */
+const GDP={
+TUV:65000000,NRU:196000000,MHL:342000000,PLW:377000000,
+KIR:401000000,FSM:521000000,TON:716000000,DMA:791000000,
+KNA:1140000000,STP:1160000000,VCT:1240000000,WSM:1380000000,
+VUT:1400000000,GRD:1480000000,COM:1810000000,SLB:1840000000,
+TLS:2170000000,SYC:2250000000,ERI:2280000000,ATG:2380000000,
+SMR:2420000000,GMB:2790000000,LSO:2970000000,GNB:2990000000,
+CPV:3450000000,BLZ:3450000000,CAF:3490000000,BTN:3860000000,
+AND:4880000000,DJI:4720000000,LBR:5640000000,SWZ:5790000000,
+SUR:5910000000,SSD:6070000000,FJI:6350000000,YEM:7440000000,
+BDI:8140000000,SLE:8270000000,BRB:8480000000,LIE:9440000000,
+MNE:10230000000,MCO:11130000000,TGO:13440000000,GNQ:13720000000,
+SOM:14170000000,MRT:14350000000,XKX:14050000000,PRK:16450000000,
+BRN:16860000000,COG:17030000000,BHS:17040000000,MUS:17120000000,
+PSE:17170000000,NAM:17310000000,RWA:17340000000,MWI:18150000000,
+LAO:18960000000,AFG:19660000000,SYR:19990000000,TJK:20420000000,
+MDG:21180000000,MKD:21610000000,MDA:21890000000,BWA:21940000000,
+JAM:23030000000,MOZ:23280000000,GAB:23360000000,KGZ:23610000000,
+NIC:24230000000,NER:24810000000,TCD:25630000000,TTO:26840000000,
+BEN:27790000000,MLT:30710000000,MNG:28450000000,GIN:29930000000,
+ARM:31870000000,BFA:32510000000,ALB:33330000000,MLI:33850000000,
+PNG:34400000000,LBN:34500000000,BIH:36770000000,HTI:39180000000,
+SLV:39840000000,SEN:40470000000,ZMB:41240000000,HND:41510000000,
+GEO:42720000000,ISL:43800000000,SDN:44690000000,NPL:45840000000,
+CYP:45170000000,BHR:48850000000,KHM:52380000000,LBY:52450000000,
+LVA:53690000000,ZWE:56710000000,PRY:60540000000,TUN:60750000000,
+JOR:64910000000,CMR:65140000000,UGA:73370000000,AZE:78370000000,
+BOL:80740000000,TKM:83070000000,MMR:83830000000,SVN:86730000000,
+TZA:94890000000,PAN:95020000000,URY:96090000000,BLR:102040000000,
+LTU:105910000000,LKA:108830000000,CRI:109930000000,LUX:110420000000,
+VEN:111300000000,SRB:112030000000,CIV:112120000000,HRV:116570000000,
+OMN:117180000000,GHA:118290000000,ETH:121530000000,COD:123410000000,
+GTM:128890000000,DOM:136150000000,ECU:138190000000,KEN:147270000000,
+BGR:148120000000,AGO:152350000000,SVK:168900000000,KWT:172920000000,
+UZB:181500000000,MAR:194330000000,CUB:201990000000,QAT:217420000000,
+UKR:225340000000,IRQ:264780000000,HUN:271120000000,NZL:278640000000,
+IRN:300290000000,GRC:307550000000,DZA:317170000000,FIN:337670000000,
+KAZ:360460000000,NGA:377370000000,PRT:380640000000,PER:380900000000,
+PAK:407790000000,CHL:407850000000,EGY:429650000000,CZE:432600000000,
+DNK:462530000000,ZAF:479960000000,ROU:480830000000,BGD:510710000000,
+PHL:512220000000,MYS:516430000000,VNM:527270000000,COL:539530000000,
+THA:580000000000,NOR:599410000000,ARE:621550000000,AUT:623720000000,
+SGP:659570000000,ARG:688380000000,ISR:719850000000,SWE:760480000000,
+BEL:776730000000,IRL:779380000000,TWN:976720000000,POL:1130000000000,
+CHE:1150000000000,SAU:1390000000000,NLD:1450000000000,IDN:1540000000000,
+TUR:1640000000000,KOR:1930000000000,ESP:2090000000000,MEX:2120000000000,
+AUS:2120000000000,BRA:2640000000000,RUS:2660000000000,ITA:2740000000000,
+FRA:3600000000000,IND:4150000000000,GBR:4260000000000,JPN:4380000000000,
+DEU:5450000000000,CHN:20850000000000,USA:32380000000000,
+EST:51630000000,ESH:750000000,
+CAN:2200000000000,GUY:20000000000,MDV:7000000000,LCA:2500000000
+};
+
+const ROSTER=`af|AFG|Afghanistan
+al|ALB|Albania
+dz|DZA|Algeria
+ad|AND|Andorra
+ao|AGO|Angola
+ag|ATG|Antigua and Barbuda
+ar|ARG|Argentina
+am|ARM|Armenia
+au|AUS|Australia
+at|AUT|Austria
+az|AZE|Azerbaijan
+bs|BHS|Bahamas
+bh|BHR|Bahrain
+bd|BGD|Bangladesh
+bb|BRB|Barbados
+by|BLR|Belarus
+be|BEL|Belgium
+bz|BLZ|Belize
+bj|BEN|Benin
+bt|BTN|Bhutan
+bo|BOL|Bolivia
+ba|BIH|Bosnia and Herzegovina
+bw|BWA|Botswana
+br|BRA|Brazil
+bn|BRN|Brunei
+bg|BGR|Bulgaria
+bf|BFA|Burkina Faso
+bi|BDI|Burundi
+cv|CPV|Cabo Verde
+kh|KHM|Cambodia
+cm|CMR|Cameroon
+ca|CAN|Canada
+cf|CAF|Central African Republic
+td|TCD|Chad
+cl|CHL|Chile
+cn|CHN|China
+co|COL|Colombia
+km|COM|Comoros
+cg|COG|Republic of the Congo
+cr|CRI|Costa Rica
+ci|CIV|Côte d’Ivoire
+hr|HRV|Croatia
+cu|CUB|Cuba
+cy|CYP|Cyprus
+cz|CZE|Czechia
+kp|PRK|North Korea
+cd|COD|Democratic Republic of the Congo
+dk|DNK|Denmark
+dj|DJI|Djibouti
+dm|DMA|Dominica
+do|DOM|Dominican Republic
+ec|ECU|Ecuador
+eg|EGY|Egypt
+sv|SLV|El Salvador
+gq|GNQ|Equatorial Guinea
+er|ERI|Eritrea
+ee|EST|Estonia
+sz|SWZ|Eswatini
+et|ETH|Ethiopia
+fj|FJI|Fiji
+fi|FIN|Finland
+fr|FRA|France
+ga|GAB|Gabon
+gm|GMB|Gambia
+ge|GEO|Georgia
+de|DEU|Germany
+gh|GHA|Ghana
+gr|GRC|Greece
+gd|GRD|Grenada
+gt|GTM|Guatemala
+gn|GIN|Guinea
+gw|GNB|Guinea-Bissau
+gy|GUY|Guyana
+ht|HTI|Haiti
+hn|HND|Honduras
+hu|HUN|Hungary
+is|ISL|Iceland
+in|IND|India
+id|IDN|Indonesia
+ir|IRN|Iran
+iq|IRQ|Iraq
+ie|IRL|Ireland
+il|ISR|Israel
+it|ITA|Italy
+jm|JAM|Jamaica
+jp|JPN|Japan
+jo|JOR|Jordan
+kz|KAZ|Kazakhstan
+ke|KEN|Kenya
+ki|KIR|Kiribati
+kw|KWT|Kuwait
+kg|KGZ|Kyrgyzstan
+la|LAO|Laos
+lv|LVA|Latvia
+lb|LBN|Lebanon
+ls|LSO|Lesotho
+lr|LBR|Liberia
+ly|LBY|Libya
+li|LIE|Liechtenstein
+lt|LTU|Lithuania
+lu|LUX|Luxembourg
+mg|MDG|Madagascar
+mw|MWI|Malawi
+my|MYS|Malaysia
+mv|MDV|Maldives
+ml|MLI|Mali
+mt|MLT|Malta
+mh|MHL|Marshall Islands
+mr|MRT|Mauritania
+mu|MUS|Mauritius
+mx|MEX|Mexico
+fm|FSM|Micronesia
+mc|MCO|Monaco
+mn|MNG|Mongolia
+me|MNE|Montenegro
+ma|MAR|Morocco
+mz|MOZ|Mozambique
+mm|MMR|Myanmar
+na|NAM|Namibia
+nr|NRU|Nauru
+np|NPL|Nepal
+nl|NLD|Netherlands
+nz|NZL|New Zealand
+ni|NIC|Nicaragua
+ne|NER|Niger
+ng|NGA|Nigeria
+mk|MKD|North Macedonia
+no|NOR|Norway
+om|OMN|Oman
+pk|PAK|Pakistan
+pw|PLW|Palau
+pa|PAN|Panama
+pg|PNG|Papua New Guinea
+py|PRY|Paraguay
+pe|PER|Peru
+ph|PHL|Philippines
+pl|POL|Poland
+pt|PRT|Portugal
+qa|QAT|Qatar
+kr|KOR|South Korea
+md|MDA|Moldova
+ro|ROU|Romania
+ru|RUS|Russia
+rw|RWA|Rwanda
+kn|KNA|Saint Kitts and Nevis
+lc|LCA|Saint Lucia
+vc|VCT|Saint Vincent and the Grenadines
+ws|WSM|Samoa
+sm|SMR|San Marino
+st|STP|Sao Tome and Principe
+sa|SAU|Saudi Arabia
+sn|SEN|Senegal
+rs|SRB|Serbia
+sc|SYC|Seychelles
+sl|SLE|Sierra Leone
+sg|SGP|Singapore
+sk|SVK|Slovakia
+si|SVN|Slovenia
+sb|SLB|Solomon Islands
+so|SOM|Somalia
+za|ZAF|South Africa
+ss|SSD|South Sudan
+es|ESP|Spain
+lk|LKA|Sri Lanka
+sd|SDN|Sudan
+sr|SUR|Suriname
+se|SWE|Sweden
+ch|CHE|Switzerland
+sy|SYR|Syria
+tj|TJK|Tajikistan
+th|THA|Thailand
+tl|TLS|Timor-Leste
+tg|TGO|Togo
+to|TON|Tonga
+tt|TTO|Trinidad and Tobago
+tn|TUN|Tunisia
+tr|TUR|Türkiye
+tm|TKM|Turkmenistan
+tv|TUV|Tuvalu
+ug|UGA|Uganda
+ua|UKR|Ukraine
+ae|ARE|United Arab Emirates
+gb|GBR|United Kingdom
+tz|TZA|Tanzania
+us|USA|United States
+uy|URY|Uruguay
+uz|UZB|Uzbekistan
+vu|VUT|Vanuatu
+ve|VEN|Venezuela
+vn|VNM|Vietnam
+ye|YEM|Yemen
+zm|ZMB|Zambia
+zw|ZWE|Zimbabwe
+ps|PSE|Palestine
+xk|XKX|Kosovo
+tw|TWN|Taiwan
+eh|ESH|Western Sahara`;
+
+function buildRoster(){
+ const unique=new Map();
+ for(const row of ROSTER.trim().split("\n")){
+  const [code,iso3,name]=row.split("|");
+  if(!unique.has(iso3)){
+   const hasGDP=Number.isFinite(GDP[iso3])&&GDP[iso3]>0;
+   unique.set(iso3,{
+    code,iso3,name,
+    gdp:hasGDP?GDP[iso3]:estimateGDP(iso3),
+    estimated:!hasGDP
+   });
+  }
+ }
+ return [...unique.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+/* Rough fallback estimates only for countries missing from your ranking. */
+function estimateGDP(iso3){
+ const estimates={
+  CAN:2200000000000,GUY:20000000000,MDV:7000000000,LCA:2500000000
+ };
+ return estimates[iso3]||1000000000;
+}
+
+let countries=[];
+let state={rolls:0,coins:100,luck:0,bestRank:-1,inventory:{},history:[],bestPull:null,freeClaims:0,settings:{sound:true,shiny:true,auto:false}};
+let rolling=false,autoTimer=null,audioCtx=null,oddsShown=false;
+let cutsceneTimer=null,cutsceneResolve=null;
+
+function loadSave(){
+ try{
+  const s=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");
+  if(s)state={...state,...s,inventory:s.inventory||{},history:s.history||[],settings:{sound:true,shiny:true,auto:false,...s.settings}};
+ }catch(e){console.warn("Could not read save",e);}
+}
+function save(){
+ state.settings={sound:$("soundToggle").checked,shiny:$("shinyToggle").checked,auto:$("autoToggle").checked};
+ try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
+ catch(e){$("status").textContent="⚠️ Browser storage unavailable; progress may not save.";}
+}
+function fmtGDP(n){
+ if(!n)return "GDP unavailable";
+ if(n>=1e12)return "$"+(n/1e12).toFixed(2)+"T";
+ if(n>=1e9)return "$"+(n/1e9).toFixed(1)+"B";
+ if(n>=1e6)return "$"+(n/1e6).toFixed(0)+"M";
+ return "$"+Math.round(n).toLocaleString();
+}
+function flagUrl(c){return "https://flagcdn.com/w320/"+c.code.toLowerCase()+".png";}
+
+/* Use the supplied ranking directly. Do not overwrite it with live API data. */
+async function loadCountries(){
+ countries=buildRoster();
+ $("loadStatus").textContent="Using your GDP ranking — "+countries.length+" countries ready!";
+ $("loadProgress").style.width="100%";
+ $("rollButton").disabled=false;
+ $("rollButton").textContent="🎲 ROLL COUNTRY";
+ renderAll();
+
+ if(state.settings.auto){
+  $("autoToggle").checked=true;
+  $("settingsAuto").checked=true;
+  startAuto();
+ }
+}
+
+function rarity(c){
+ let chosen=TIERS[0];
+ for(const tier of TIERS)if(c.gdp>=tier.min)chosen=tier;
+ return chosen;
+}
+function weight(c){
+ const power=Math.max(.35,.9-state.luck*.07);
+ return 1/Math.pow(Math.max(c.gdp,1)/1e9,power);
+}
+function chance(c){
+ const total=countries.reduce((sum,x)=>sum+weight(x),0);
+ return total?weight(c)/total:0;
+}
+function pickCountry(){
+ const ws=countries.map(weight);
+ let r=Math.random()*ws.reduce((a,b)=>a+b,0);
+ for(let i=0;i<countries.length;i++){r-=ws[i];if(r<=0)return countries[i];}
+ return countries[countries.length-1];
+}
+async function unlockAudio(){
+ try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state!=="running")await audioCtx.resume();}
+ catch(e){console.warn("Audio unavailable",e);}
+}
+function sound(type){
+ if(!$("soundToggle").checked||!audioCtx||audioCtx.state!=="running")return;
+ try{
+  const now=audioCtx.currentTime;
+  const notes=type==="roll"?[440,520,620]:type==="mythic"?[523,659,784,1046,1318]:type==="legendary"?[440,554,659,880,1100]:type==="epic"?[392,523,659,784]:type==="shiny"?[660,880,1100]:[440,660];
+  notes.forEach((freq,i)=>{
+   const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+   osc.type=type==="roll"?"triangle":"sine";
+   osc.frequency.setValueAtTime(freq,now+i*.075);
+   gain.gain.setValueAtTime(.0001,now+i*.075);
+   gain.gain.exponentialRampToValueAtTime(type==="roll"?.10:.14,now+i*.075+.015);
+   gain.gain.exponentialRampToValueAtTime(.0001,now+i*.075+.19);
+   osc.connect(gain);gain.connect(audioCtx.destination);
+   osc.start(now+i*.075);osc.stop(now+i*.075+.2);
+  });
+ }catch(e){console.warn("Sound error",e);}
+}
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+function closeCutscene(){
+ clearTimeout(cutsceneTimer);$("blackout").classList.remove("active");$("blackout").innerHTML="";
+ if(cutsceneResolve){const r=cutsceneResolve;cutsceneResolve=null;r();}
+}
+function dramaticReveal(c,info,isShiny){
+ return new Promise(resolve=>{
+  const overlay=$("blackout"),mythic=info.name==="Mythic",epic=info.name==="Epic";
+  const color=mythic?"#ff779d":epic?"#c6a0ff":"#ffd166";
+  clearTimeout(cutsceneTimer);cutsceneResolve=resolve;
+  overlay.innerHTML=`<div class="scene" style="--aura:${color}">
+   <div class="vignette"></div><div class="fog"></div><div class="cutStar ${mythic?"mythic":""}"></div>
+   <div class="cutText">${info.name.toUpperCase()} COUNTRY DISCOVERED</div>${mythic?"":'<div class="flash"></div>'}
+   <div class="cutReveal"><img src="${flagUrl(c)}" alt="${c.name} flag">
+   <h2>${c.name}${isShiny?" ✨":""}</h2><p style="color:${color};font-weight:900">${info.name.toUpperCase()}${isShiny?" · SHINY":""}</p>
+   <p>GDP: ${fmtGDP(c.gdp)}${c.estimated?" (estimate)":""}</p>
+   <p>ROLL ODDS: 1 IN ${Math.max(1,Math.round(1/chance(c))).toLocaleString()}</p></div>
+   <button class="cutContinue" id="cutContinue">CONTINUE</button></div>`;
+  overlay.classList.add("active");sound(mythic?"mythic":epic?"epic":"legendary");
+  $("cutContinue").addEventListener("click",closeCutscene);cutsceneTimer=setTimeout(closeCutscene,6500);
+ });
+}
+async function rollCountry(){
+ if(rolling||!countries.length)return;
+ rolling=true;$("rollButton").disabled=true;await unlockAudio();sound("roll");
+ for(let i=0;i<7;i++){
+  const preview=countries[Math.floor(Math.random()*countries.length)];
+  $("flag").style.display="block";$("flag").classList.remove("shinyflag");$("flag").src=flagUrl(preview);
+  $("placeholder").style.display="none";$("countryName").textContent=preview.name;$("rarity").textContent="ROLLING…";$("details").textContent="The world is spinning!";
+  await wait(65+i*12);
+ }
+ const c=pickCountry(),info=rarity(c),isShiny=$("shinyToggle").checked&&Math.random()<.01;
+ const key=c.iso3+(isShiny?"-SHINY":"");const prior=state.inventory[key]||0;state.inventory[key]=prior+1;state.rolls++;
+ const earned=info.rank>=4?25:info.rank>=3?10:info.rank>=2?5:2,bonus=isShiny?100:0;
+ state.coins+=earned+bonus;state.bestRank=Math.max(state.bestRank,info.rank);
+ const entry={name:c.name,code:c.code,iso3:c.iso3,gdp:c.gdp,estimated:c.estimated,rarity:info.name,rank:info.rank,shiny:isShiny,time:Date.now()};
+ state.history.unshift(entry);state.history=state.history.slice(0,10);
+ if(!state.bestPull||entry.rank>state.bestPull.rank||(entry.rank===state.bestPull.rank&&entry.shiny&&!state.bestPull.shiny))state.bestPull=entry;
+ $("flag").src=flagUrl(c);$("flag").alt=c.name+" flag";$("flag").classList.toggle("shinyflag",isShiny);
+ $("countryName").textContent=c.name+(isShiny?" ✨ SHINY":"");$("rarity").className=isShiny?"shiny":info.cls;
+ $("rarity").textContent=(isShiny?"✨ SHINY · ":"")+info.name;
+ $("details").textContent="GDP: "+fmtGDP(c.gdp)+(c.estimated?" (estimate)":"")+" · "+(prior?"Duplicate #"+(prior+1):"NEW COUNTRY!")+" · +"+(earned+bonus)+" coins";
+ $("result").classList.remove("pop");void $("result").offsetWidth;$("result").classList.add("pop");
+ $("status").textContent=isShiny?"✨ SHINY PULL! +"+bonus+" bonus coins!":(prior?"Duplicate collected.":"New country discovered!")+" +"+earned+" coins.";
+ sound(isShiny?"shiny":info.rank>=5?"mythic":info.rank>=4?"legendary":info.rank>=3?"epic":info.rank>=2?"rare":"reveal");
+ save();renderAll();
+ if(info.rank>=3)await dramaticReveal(c,info,isShiny);
+ rolling=false;$("rollButton").disabled=false;if($("autoToggle").checked)startAuto();
+}
+function startAuto(){
+ if(autoTimer||rolling||!$("autoToggle").checked)return;
+ autoTimer=setTimeout(async()=>{autoTimer=null;if($("autoToggle").checked&&!rolling)await rollCountry();},650);
+}
+function stopAuto(){
+ $("autoToggle").checked=false;$("settingsAuto").checked=false;
+ if(autoTimer)clearTimeout(autoTimer);autoTimer=null;save();
+}
+function buyLuck(){
+ const cost=100*Math.pow(2,state.luck);
+ if(state.coins<cost){$("status").textContent="Not enough coins! Keep rolling.";return;}
+ state.coins-=cost;state.luck++;save();renderAll();$("status").textContent="🍀 Luck upgraded to level "+state.luck+"!";sound("rare");
+}
+function claimCoins(){
+ if(state.freeClaims>=5){$("status").textContent="You've claimed all 5 free coin bonuses.";return;}
+ state.freeClaims++;state.coins+=25;save();renderAll();$("status").textContent="+25 free coins! ("+state.freeClaims+"/5)";sound("reveal");
+}
+function renderStats(){
+ $("rolls").textContent=state.rolls.toLocaleString();$("collected").textContent=Object.keys(state.inventory).length.toLocaleString();
+ $("coins").textContent=state.coins.toLocaleString();$("best").textContent=state.bestRank<0?"None":TIERS[state.bestRank].name;
+ $("luckLevel").textContent=state.luck;$("luckBoost").textContent=(1+state.luck*.35).toFixed(2)+"×";
+ $("buyLuck").textContent="Buy Luck Upgrade — "+(100*Math.pow(2,state.luck)).toLocaleString()+" coins";
+ $("collectionCount").textContent=Object.keys(state.inventory).length+" variants";
+}
+function renderInventory(filter="all"){
+ const root=$("inventory");root.innerHTML="";const entries=[];
+ for(const c of countries)for(const shiny of [false,true]){
+  const key=c.iso3+(shiny?"-SHINY":"");const count=state.inventory[key]||0;if(count)entries.push({c,shiny,count});
+ }
+ const filtered=entries.filter(x=>filter==="shiny"?x.shiny:filter==="duplicates"?x.count>1:true)
+  .sort((a,b)=>Number(b.shiny)-Number(a.shiny)||rarity(b.c).rank-rarity(a.c).rank||b.count-a.count);
+ if(!filtered.length){root.innerHTML='<p class="muted">Nothing here yet. Roll some countries!</p>';return;}
+ for(const x of filtered){
+  const el=document.createElement("div");el.className="card";const img=document.createElement("img");
+  img.src=flagUrl(x.c);img.alt=x.c.name+" flag";img.loading="lazy";if(x.shiny)img.className="shinyflag";
+  const title=document.createElement("strong");title.textContent=x.c.name+(x.shiny?" ✨":"");
+  const rar=document.createElement("span");rar.className=x.shiny?"shiny":rarity(x.c).cls;rar.textContent=(x.shiny?"SHINY · ":"")+rarity(x.c).name;
+  const small=document.createElement("small");small.textContent="GDP: "+fmtGDP(x.c.gdp)+(x.c.estimated?" (estimate)":"")+" · Owned: "+x.count;
+  el.append(img,title,rar,small);root.append(el);
+ }
+}
+function renderHistory(){
+ const root=$("log");root.innerHTML="";
+ if(!state.history.length){root.textContent="No rolls yet. Go on, roll the world!";return;}
+ state.history.forEach((h,i)=>{
+  const row=document.createElement("div");row.className="logrow";const img=document.createElement("img");
+  img.src=flagUrl(h);img.alt=h.name+" flag";img.style.cssText="width:34px;height:22px;object-fit:contain;vertical-align:middle;margin-right:7px";
+  const b=document.createElement("b");b.textContent=h.name+(h.shiny?" ✨ SHINY":"");
+  const span=document.createElement("span");span.className=h.shiny?"shiny":TIERS[h.rank].cls;span.textContent=" — "+h.rarity;
+  row.append((i+1)+". ",img,b,span);root.append(row);
+ });
+}
+function renderLeaderboard(){
+ const root=$("leaderboard");root.innerHTML="";
+ const rows=[["Total rolls",state.rolls.toLocaleString()],["Unique variants",Object.keys(state.inventory).length],
+ ["Luck level",state.luck],["Shiny variants",Object.keys(state.inventory).filter(k=>k.endsWith("-SHINY")).length],
+ ["Best pull",state.bestPull?state.bestPull.name+(state.bestPull.shiny?" ✨":"")+" · "+state.bestPull.rarity:"No pull yet"]];
+ rows.forEach(([label,value])=>{const p=document.createElement("p");p.textContent=label+": ";const strong=document.createElement("strong");strong.textContent=value;p.append(strong);root.append(p);});
+}
+function renderOdds(){
+ const root=$("odds");root.innerHTML="";
+ [...countries].sort((a,b)=>chance(b)-chance(a)).forEach(c=>{
+  const row=document.createElement("div");row.className="logrow";const img=document.createElement("img");
+  img.src=flagUrl(c);img.alt=c.name+" flag";img.style.cssText="width:34px;height:22px;object-fit:contain;vertical-align:middle;margin-right:7px";
+  const span=document.createElement("span");span.textContent=c.name+" · "+rarity(c).name+" · "+(chance(c)*100).toFixed(4)+"%";
+  row.append(img,span);root.append(row);
+ });
+}
+function renderAll(){renderStats();renderInventory();renderHistory();renderLeaderboard();if(oddsShown)renderOdds();}
+
+$("rollButton").addEventListener("click",rollCountry);
+$("buyLuck").addEventListener("click",buyLuck);
+$("buyCoins").addEventListener("click",claimCoins);
+$("stopAuto").addEventListener("click",stopAuto);
+$("autoToggle").addEventListener("change",()=>{$("settingsAuto").checked=$("autoToggle").checked;if($("autoToggle").checked)startAuto();else stopAuto();save();});
+$("soundToggle").addEventListener("change",()=>{$("settingsSound").checked=$("soundToggle").checked;save();});
+$("shinyToggle").addEventListener("change",()=>{$("settingsShiny").checked=$("shinyToggle").checked;save();});
+$("settingsSound").addEventListener("change",()=>{$("soundToggle").checked=$("settingsSound").checked;save();});
+$("settingsShiny").addEventListener("change",()=>{$("shinyToggle").checked=$("settingsShiny").checked;save();});
+$("settingsAuto").addEventListener("change",()=>{$("autoToggle").checked=$("settingsAuto").checked;if($("autoToggle").checked)startAuto();else stopAuto();save();});
+$("toggleSettings").addEventListener("click",()=>{const content=$("settingsContent");content.hidden=!content.hidden;$("toggleSettings").textContent=content.hidden?"Show Settings":"Hide Settings";});
+$("saveNow").addEventListener("click",()=>{save();$("status").textContent="💾 Progress saved on this browser!";});
+$("resetEverything").addEventListener("click",()=>{
+ if(!confirm("⚠️ RESET EVERYTHING?\n\nThis deletes your rolls, coins, luck, collection, shiny variants and settings.\n\nThis cannot be undone!"))return;
+ stopAuto();closeCutscene();localStorage.removeItem(SAVE_KEY);
+ state={rolls:0,coins:100,luck:0,bestRank:-1,inventory:{},history:[],bestPull:null,freeClaims:0,settings:{sound:true,shiny:true,auto:false}};
+ $("soundToggle").checked=true;$("shinyToggle").checked=true;$("autoToggle").checked=false;
+ $("settingsSound").checked=true;$("settingsShiny").checked=true;$("settingsAuto").checked=false;
+ $("flag").style.display="none";$("placeholder").style.display="block";$("countryName").textContent="";$("rarity").textContent="";$("details").textContent="";
+ save();renderAll();$("status").textContent="🆕 Everything reset! Start your new adventure!";
+});
+document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>renderInventory(b.dataset.filter)));
+$("showOdds").addEventListener("click",()=>{oddsShown=!oddsShown;$("odds").hidden=!oddsShown;$("showOdds").textContent=oddsShown?"Hide odds":"Show odds";if(oddsShown)renderOdds();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("blackout").classList.contains("active"))closeCutscene();});
+
+loadSave();
+$("soundToggle").checked=state.settings.sound!==false;
+$("shinyToggle").checked=state.settings.shiny!==false;
+$("autoToggle").checked=state.settings.auto===true;
+$("settingsSound").checked=$("soundToggle").checked;
+$("settingsShiny").checked=$("shinyToggle").checked;
+$("settingsAuto").checked=$("autoToggle").checked;
+
+loadCountries().catch(err=>{
+ console.error(err);
+ countries=buildRoster();
+ $("loadStatus").textContent="Ready with built-in countries: "+countries.length+".";
+ $("loadProgress").style.width="100%";
+ $("rollButton").disabled=false;
+ $("rollButton").textContent="🎲 ROLL COUNTRY";
+ renderAll();
+});
+</script>
+</body>
+</html>
